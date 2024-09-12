@@ -145,7 +145,6 @@ static struct file_system_type sharefs_fs_type = {
 	.kill_sb	= generic_shutdown_super,
 	.fs_flags	= 0,
 };
-MODULE_ALIAS_FS(SHAREFS_NAME);
 
 static int __init init_sharefs_fs(void)
 {
@@ -182,12 +181,13 @@ static void __exit exit_sharefs_fs(void)
 	sharefs_destroy_inode_cache();
 	sharefs_destroy_dentry_cache();
 	unregister_filesystem(&sharefs_fs_type);
+	sharefs_exit_configfs();
 	pr_info("Completed sharefs module unload\n");
 }
 
-MODULE_AUTHOR("Jingjing Mao");
-MODULE_DESCRIPTION("Sharefs");
-MODULE_LICENSE("GPL");
-
 module_init(init_sharefs_fs);
 module_exit(exit_sharefs_fs);
+
+MODULE_LICENSE("GPL V2");
+MODULE_DESCRIPTION("Share File System");
+MODULE_ALIAS_FS("sharefs");

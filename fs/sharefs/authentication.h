@@ -4,6 +4,8 @@
  *
  * Copyright (c) 2023 Huawei Device Co., Ltd.
  */
+#ifndef AUTHENTICATION_H
+#define AUTHENTICATION_H
 
 #include "sharefs.h"
 
@@ -73,3 +75,5 @@ static inline int get_bundle_uid(struct sharefs_sb_info *sbi, const char *bname)
 {
 	return sbi->user_id * BASE_USER_RANGE + get_bid_config(bname);
 }
+
+#endif //_AUTHENTICATION_H_
