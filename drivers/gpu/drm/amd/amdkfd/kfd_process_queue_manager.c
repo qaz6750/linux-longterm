@@ -86,9 +86,12 @@ void kfd_process_dequeue_from_device(struct kfd_process_device *pdd)
 
 	if (pdd->already_dequeued)
 		return;
-
+	/* The MES context flush needs to filter out the case which the
+	 * KFD process is created without setting up the MES context and
+	 * queue for creating a compute queue.
+	 */
 	dev->dqm->ops.process_termination(dev->dqm, &pdd->qpd);
-	if (dev->kfd->shared_resources.enable_mes &&
+	if (dev->kfd->shared_resources.enable_mes && !!pdd->proc_ctx_gpu_addr &&
 	    down_read_trylock(&dev->adev->reset_domain->sem)) {
 		amdgpu_mes_flush_shader_debugger(dev->adev,
 						 pdd->proc_ctx_gpu_addr);
@@ -212,13 +215,17 @@ static void pqm_clean_queue_resource(struct process_queue_manager *pqm,
 void pqm_uninit(struct process_queue_manager *pqm)
 {
 	struct process_queue_node *pqn, *next;
-	struct kfd_process_device *pdd;
 
 	list_for_each_entry_safe(pqn, next, &pqm->queues, process_queue_list) {
 		if (pqn->q) {
-			pdd = kfd_get_process_device_data(pqn->q->device, pqm->process);
-			kfd_queue_unref_bo_vas(pdd, &pqn->q->properties);
-			kfd_queue_release_buffers(pdd, &pqn->q->properties);
+			struct kfd_process_device *pdd = kfd_get_process_device_data(pqn->q->device,
+										     pqm->process);
+			if (pdd) {
+				kfd_queue_unref_bo_vas(pdd, &pqn->q->properties);
+				kfd_queue_release_buffers(pdd, &pqn->q->properties);
+			} else {
+				WARN_ON(!pdd);
+			}
 			pqm_clean_queue_resource(pqm, pqn);
 		}
 
@@ -291,7 +298,7 @@ static int init_user_queue(struct process_queue_manager *pqm,
 	return 0;
 
 free_gang_ctx_bo:
-	amdgpu_amdkfd_free_gtt_mem(dev->adev, (*q)->gang_ctx_bo);
+	amdgpu_amdkfd_free_gtt_mem(dev->adev, &(*q)->gang_ctx_bo);
 cleanup:
 	uninit_queue(*q);
 	*q = NULL;
