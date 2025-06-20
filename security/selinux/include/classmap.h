@@ -256,6 +256,8 @@ const struct security_class_mapping secclass_map[] = {
 	  { "override_creds", "sqpoll", "cmd", NULL } },
 	{ "user_namespace",
 	  { "create", NULL } },
+	{ "code_sign",
+	  { "add_cert_chain", "remove_cert_chain", NULL } },
 	{ NULL }
   };
 

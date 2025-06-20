@@ -135,6 +135,13 @@ verify_data_block(struct inode *inode, struct fsverity_info *vi,
 		return true;
 	}
 
+#ifdef CONFIG_SECURITY_CODE_SIGN
+	if (data_pos >= vi->verified_data_size) {
+		pr_debug_ratelimited("Data[%lu] out of verity range %lu\n",
+			data_pos, vi->verified_data_size);
+		return true;
+	}
+#endif
 	/*
 	 * Starting at the leaf level, ascend the tree saving hash blocks along
 	 * the way until we find a hash block that has already been verified, or
@@ -333,6 +340,21 @@ void fsverity_verify_bio(struct bio *bio)
 }
 EXPORT_SYMBOL_GPL(fsverity_verify_bio);
 #endif /* CONFIG_BLOCK */
+
+/**
+ * fsverity_get_verified_data_size() - get verified data size of a verity file
+ * @inode: the file's inode
+ *
+ * Return: verified data size
+ */
+u64 fsverity_get_verified_data_size(const struct inode *inode)
+{
+#ifdef CONFIG_SECURITY_CODE_SIGN
+	return fsverity_get_info(inode)->verified_data_size;
+#else
+	return inode->i_size;
+#endif
+}
 
 /**
  * fsverity_enqueue_verify_work() - enqueue work on the fs-verity workqueue

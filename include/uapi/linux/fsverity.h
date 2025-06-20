@@ -100,4 +100,26 @@ struct fsverity_read_metadata_arg {
 #define FS_IOC_READ_VERITY_METADATA \
 	_IOWR('f', 135, struct fsverity_read_metadata_arg)
 
+struct code_sign_enable_arg {
+	__u32 version;
+	__u32 hash_algorithm;
+	__u32 block_size;
+	__u32 salt_size;
+	__u64 salt_ptr;
+	__u32 sig_size;
+	__u32 __reserved1;
+	__u64 sig_ptr;
+	__u64 __reserved2[5];
+	__u32 __reserved3;
+	__u32 pgtypeinfo_size;
+	__u64 pgtypeinfo_off;
+	__u64 tree_offset;
+	__u64 root_hash_ptr;
+	__u64 data_size;
+	__u32 flags;
+	__u32 cs_version;
+};
+
+#define FS_IOC_ENABLE_CODE_SIGN _IOW('f', 200, struct code_sign_enable_arg)
+
 #endif /* _UAPI_LINUX_FSVERITY_H */

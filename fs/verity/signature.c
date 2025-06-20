@@ -19,6 +19,7 @@
 #include <linux/key.h>
 #include <linux/slab.h>
 #include <linux/verification.h>
+#include <linux/hck/lite_hck_code_sign.h>
 
 /*
  * /proc/sys/fs/verity/require_signatures
@@ -34,6 +35,43 @@ int fsverity_require_signatures;
  */
 static struct key *fsverity_keyring;
 
+#ifdef CONFIG_SECURITY_CODE_SIGN
+
+void fsverity_set_cert_type(struct fsverity_info *vi,
+	int cert_type)
+{
+	vi->cert_type = cert_type;
+}
+
+int fsverity_get_cert_type(const struct inode *inode)
+{
+	return fsverity_get_info(inode)->cert_type;
+}
+
+#else /* !CONFIG_SECURITY_CODE_SIGN */
+
+static void inline fsverity_set_cert_type(struct fsverity_info *verity_info,
+	int cert_type)
+{
+}
+
+#endif
+
+static inline int fsverity_verify_certchain(struct fsverity_info *vi,
+	const void *raw_pkcs7, size_t pkcs7_len)
+{
+	int ret = 0;
+
+	CALL_HCK_LITE_HOOK(code_sign_verify_certchain_lhck,
+		raw_pkcs7, pkcs7_len, &vi->fcs_info, &ret);
+	if (ret > 0) {
+		fsverity_set_cert_type(vi, ret);
+		ret = 0;
+	}
+
+	return ret;
+}
+
 /**
  * fsverity_verify_signature() - check a verity file's signature
  * @vi: the file's fsverity_info
@@ -45,7 +83,7 @@ static struct key *fsverity_keyring;
  *
  * Return: 0 on success (signature valid or not required); -errno on failure
  */
-int fsverity_verify_signature(const struct fsverity_info *vi,
+int fsverity_verify_signature(struct fsverity_info *vi,
 			      const u8 *signature, size_t sig_size)
 {
 	const struct inode *inode = vi->inode;
@@ -85,6 +123,13 @@ int fsverity_verify_signature(const struct fsverity_info *vi,
 	d->digest_algorithm = cpu_to_le16(hash_alg - fsverity_hash_algs);
 	d->digest_size = cpu_to_le16(hash_alg->digest_size);
 	memcpy(d->digest, vi->file_digest, hash_alg->digest_size);
+
+	err = fsverity_verify_certchain(vi, signature, sig_size);
+	if (err) {
+		fsverity_err(inode, "verify cert chain failed, err = %d", err);
+		return err;
+	}
+	pr_debug("verify cert chain success\n");
 
 	err = verify_pkcs7_signature(d, sizeof(*d) + hash_alg->digest_size,
 				     signature, sig_size, fsverity_keyring,

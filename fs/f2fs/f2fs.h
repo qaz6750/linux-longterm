@@ -4603,8 +4603,8 @@ static inline bool f2fs_allow_multi_device_dio(struct f2fs_sb_info *sbi,
 
 static inline bool f2fs_need_verity(const struct inode *inode, pgoff_t idx)
 {
-	return fsverity_active(inode) &&
-	       idx < DIV_ROUND_UP(inode->i_size, PAGE_SIZE);
+	return fsverity_active(inode) && (idx <
+		DIV_ROUND_UP(fsverity_get_verified_data_size(inode), PAGE_SIZE));
 }
 
 #ifdef CONFIG_F2FS_FAULT_INJECTION

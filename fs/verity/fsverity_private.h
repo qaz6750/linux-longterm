@@ -11,6 +11,8 @@
 #define pr_fmt(fmt) "fs-verity: " fmt
 
 #include <linux/fsverity.h>
+#include <linux/code_sign.h>
+#include <linux/xpm_types.h>
 
 /*
  * Implementation limit: maximum depth of the Merkle tree.  For now 8 is plenty;
@@ -70,6 +72,11 @@ struct fsverity_info {
 	const struct inode *inode;
 	unsigned long *hash_block_verified;
 	spinlock_t hash_page_init_lock;
+#ifdef CONFIG_SECURITY_CODE_SIGN
+	struct cs_info fcs_info;
+	u64 verified_data_size;
+	int cert_type;
+#endif
 };
 
 #define FS_VERITY_MAX_SIGNATURE_SIZE	(FS_VERITY_MAX_DESCRIPTOR_SIZE - \
@@ -78,6 +85,8 @@ struct fsverity_info {
 /* hash_algs.c */
 
 extern struct fsverity_hash_alg fsverity_hash_algs[];
+
+extern int g_fsverity_hash_algs_num;
 
 const struct fsverity_hash_alg *fsverity_get_hash_alg(const struct inode *inode,
 						      unsigned int num);
@@ -106,7 +115,8 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
 				     const struct inode *inode,
 				     unsigned int hash_algorithm,
 				     unsigned int log_blocksize,
-				     const u8 *salt, size_t salt_size);
+				     const u8 *salt, size_t salt_size,
+				     u64 data_size);
 
 struct fsverity_info *fsverity_create_info(const struct inode *inode,
 					   struct fsverity_descriptor *desc);
@@ -124,13 +134,13 @@ void __init fsverity_init_info_cache(void);
 
 #ifdef CONFIG_FS_VERITY_BUILTIN_SIGNATURES
 extern int fsverity_require_signatures;
-int fsverity_verify_signature(const struct fsverity_info *vi,
+int fsverity_verify_signature(struct fsverity_info *vi,
 			      const u8 *signature, size_t sig_size);
 
 void __init fsverity_init_signature(void);
 #else /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
 static inline int
-fsverity_verify_signature(const struct fsverity_info *vi,
+fsverity_verify_signature(struct fsverity_info *vi,
 			  const u8 *signature, size_t sig_size)
 {
 	return 0;

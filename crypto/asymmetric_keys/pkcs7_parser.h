@@ -37,6 +37,11 @@ struct pkcs7_signed_info {
 #define	sinfo_has_ms_statement_type	5
 	time64_t	signing_time;
 
+#ifdef CONFIG_SECURITY_CODE_SIGN
+	const char *ownerid;
+	unsigned ownerid_len;
+#endif /* CONFIG_SECURITY_CODE_SIGN */
+
 	/* Message signature.
 	 *
 	 * This contains the generated digest of _either_ the Content Data or
