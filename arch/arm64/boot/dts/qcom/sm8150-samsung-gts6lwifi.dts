@@ -31,7 +31,7 @@
 	model = "Samsung Tab S6";
 	compatible = "samsung,gts6lwifi", "qcom,sm8150-mtp", "qcom,sm8150";
 	qcom,msm-id = <339 0x20000>;
-    qcom,board-id = <0x00010008 0x00000002>;
+	qcom,board-id = <0x00010008 0x00000002>;
 
 	aliases {
 		serial0 = &uart2;
@@ -530,6 +530,29 @@
 	};
 };
 
+&i2c17 {
+    clock-frequency = <100000>;
+    status = "okay";
+
+    fts_touchscreen@49 {
+        compatible = "stm,fts1ba90a";
+        reg = <0x49>;
+
+        pinctrl-names = "default";
+        pinctrl-0 = <&touchscreen_default>;
+
+        touchscreen-size-x = <1599>;
+        touchscreen-size-y = <2559>;
+
+        interrupt-parent = <&tlmm>;
+        interrupts = <87 0x2008>;
+        vdd-supply = <&vreg_l14a_1p8>;
+        avdd-supply = <&vreg_l17a_3p0>;
+        
+        status = "okay";
+    };
+};
+
 &gpi_dma0 {
 	status = "okay";
 };
@@ -596,6 +619,15 @@
 &tlmm {
 	/* gpios 0..3 are NFC spi, gpios 126..129 are FP spi */
 	gpio-reserved-ranges = <0 4>, <126 4>;
+
+    touchscreen_default: ts-default-state {
+        ts-active {
+            pins = "gpio87";
+            function = "gpio";
+            input-enable;
+            bias-disable;
+        };
+    };
 
 	qup_uart13_sleep: qup-uart13-sleep {
 		pinmux {
