@@ -505,7 +505,9 @@ int mtk_eint_find_irq(struct mtk_eint *eint, unsigned long eint_n)
 EXPORT_SYMBOL_GPL(mtk_eint_find_irq);
 
 int mtk_eint_do_init(struct mtk_eint *eint, struct mtk_eint_pin *eint_pin)
+int mtk_eint_do_init(struct mtk_eint *eint, struct mtk_eint_pin *eint_pin)
 {
+	unsigned int size, i, port, virq, inst = 0;
 	unsigned int size, i, port, inst = 0;
 
 	/* If clients don't assign a specific regs, let's use generic one */
@@ -517,6 +519,15 @@ int mtk_eint_do_init(struct mtk_eint *eint, struct mtk_eint_pin *eint_pin)
 	if (!eint->base_pin_num)
 		return -ENOMEM;
 
+	if (eint_pin) {
+		eint->pins = eint_pin;
+		for (i = 0; i < eint->hw->ap_num; i++) {
+			inst = eint->pins[i].instance;
+			if (inst >= eint->nbase)
+				continue;
+			eint->base_pin_num[inst]++;
+		}
+	} else {
 	if (eint_pin) {
 		eint->pins = eint_pin;
 		for (i = 0; i < eint->hw->ap_num; i++) {
@@ -580,7 +591,7 @@ int mtk_eint_do_init(struct mtk_eint *eint, struct mtk_eint_pin *eint_pin)
 		if (inst >= eint->nbase)
 			continue;
 		eint->pin_list[inst][eint->pins[i].index] = i;
-		int virq = irq_create_mapping(eint->domain, i);
+		virq = irq_create_mapping(eint->domain, i);
 		irq_set_chip_and_handler(virq, &mtk_eint_irq_chip,
 					 handle_level_irq);
 		irq_set_chip_data(virq, eint);
@@ -606,6 +617,7 @@ err_cur_mask:
 err_wake_mask:
 	devm_kfree(eint->dev, eint->pin_list);
 err_pin_list:
+	if (!eint_pin)
 	if (!eint_pin)
 		devm_kfree(eint->dev, eint->pins);
 err_pins:
